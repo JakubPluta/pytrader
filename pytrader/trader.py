@@ -17,7 +17,18 @@ class PyTrader:
     def account(self):
         return self.client.get_account()
 
+    def create_order(self, symbol:str, qty: int, side: str, type: str, time_in_force: str, *args):
+        order_id = self._create_order_id(symbol, side)
+        self.client.submit_order(symbol, qty, side, type, time_in_force,*args)
+        results = locals()
+        del results['self']
+        self.trades[order_id] = results
 
+    @staticmethod
+    def _create_order_id(symbol, side):
+        return f"{symbol}_{side}_{datetime.now().timestamp()}"
 
-
-
+    @staticmethod
+    def _parse_datetime_column(price_df: pd.DataFrame) -> pd.DataFrame:
+        price_df['datetime'] = pd.to_datetime(price_df['datetime'], unit='ms', origin='unix')
+        return price_df
