@@ -27,8 +27,17 @@ class Indicators:
     def rsi(self):
         pass
 
-    def ema(self):
-        pass
+    def ema(self, period: int):
+        locals_data = locals()
+        del locals_data['self']
+        column_name = 'ema'
+        self._current_indicators[column_name] = {}
+        self._current_indicators[column_name]['args'] = locals_data
+        self._current_indicators[column_name]['func'] = self.ema
+
+        self._stock_prices[column_name] = self._stock_prices['close'].transform(
+            lambda x: x.ewm(span=period).mean()
+        )
 
     def sma(self, period: int = 10):
         """
@@ -38,11 +47,35 @@ class Indicators:
             to take the average over a set number of time periods.
             It is an equally weighted mean of the previous n data
         """
-        #self._current_indicators['']
+        my_locals = locals()
+        del my_locals['self']
+        col = "sma"
+        self._current_indicators[col] = {}
+        self._current_indicators[col]['args'] = my_locals
+        self._current_indicators[col]['func'] = self.sma
 
-        pass
+        self._stock_prices[col] = self._stock_prices['close'].transform(
+            lambda x: x.rolling(window=period).mean()
+        )
 
     def cma(self, period: int = 10):
-        pass
+        my_locals = locals()
+        del my_locals['self']
+        col = 'cma'
+        self._current_indicators[col] = {}
+        self._current_indicators[col]['args'] = my_locals
+        self._current_indicators[col]['func'] = self.cma
+        self._stock_prices[col] = self._stock_prices['close'].transform(
+            lambda x: x.rolling(window=period).mean()
+        )
+
+    def refresh(self):
+        for indicator in self._current_indicators:
+            indicator_args = self._current_indicators[indicator]['args']
+            indicator_func = self._current_indicators[indicator]['func']
+        # update the columns
+            indicator_func(**indicator_args) # unpack dictionaries
+
+
 
 
