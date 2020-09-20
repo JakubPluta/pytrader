@@ -13,31 +13,34 @@ class Indicators:
         self._current_indicators = {}
         self._indicator_signals = {}
 
-    def price_change(self) -> pd.DataFrame:
-        my_locals = locals()
-        del my_locals['self']
+    def calculate_price_changes(self):
+        for frame in self._stock_prices.stock_frames:
+            frame.data['changes'] = frame.data['close'].transform(lambda x: x.diff())
 
-        col = 'price_change'
-        self._current_indicators[col] = {}
-        self._current_indicators[col]['args'] = my_locals
-        self._current_indicators[col]['func'] = self.price_change
+    @property
+    def stock_prices(self):
+        return self._stock_prices.stock_frames
 
-        self._stock_prices[col] = self._stock_prices['close'].transform(lambda x: x.diff())
+    def rsi(self, period: int = 14):
+        for frame in self._stock_prices.stock_frames:
+            if 'changes' not in frame.data:
+                self.calculate_price_changes()
 
-    def rsi(self):
-        pass
+            frame.data['up_day'] = frame.data['changes'].transform(lambda x: np.where(x >= 0, x, 0))
+            frame.data['down_day'] = frame.data['changes'].transform(lambda x: np.where(x < 0, x.abs(), 0))
+            frame.data['ewma_up'] = frame.data['up_day'].transform(lambda x: x.ewm(span=period).mean() )# rolling average)
+            frame.data['ewma_down'] = frame.data['down_day'].transform(lambda x: x.ewm(span=period).mean() )# rolling average)
 
-    def ema(self, period: int):
-        locals_data = locals()
-        del locals_data['self']
-        column_name = 'ema'
-        self._current_indicators[column_name] = {}
-        self._current_indicators[column_name]['args'] = locals_data
-        self._current_indicators[column_name]['func'] = self.ema
+            rsi = frame.data['ewma_up'] / frame.data['ewma_down']
+            relative_strength_idx = 100.0 - (100.0 / (1.0 + rsi))
+            frame.data['rsi'] = np.where(relative_strength_idx == 0, 100, relative_strength_idx)
+            frame.data.drop(
+                labels=['ewma_up', 'ewma_down', 'down_day', 'up_day', 'changes'], axis=1, inplace=True
+            )
 
-        self._stock_prices[column_name] = self._stock_prices['close'].transform(
-            lambda x: x.ewm(span=period).mean()
-        )
+    def ema(self, period: int = 10):
+        for frame in self._stock_prices.stock_frames:
+            frame.data[f'ema_{str(period)}'] = frame.data['close'].transform(lambda x: x.ewm(span=period).mean())
 
     def sma(self, period: int = 10):
         """
@@ -47,34 +50,10 @@ class Indicators:
             to take the average over a set number of time periods.
             It is an equally weighted mean of the previous n data
         """
-        my_locals = locals()
-        del my_locals['self']
-        col = "sma"
-        self._current_indicators[col] = {}
-        self._current_indicators[col]['args'] = my_locals
-        self._current_indicators[col]['func'] = self.sma
-
-        self._stock_prices[col] = self._stock_prices['close'].transform(
-            lambda x: x.rolling(window=period).mean()
+        for frame in self._stock_prices.stock_frames:
+            frame.data[f'sma_{str(period)}'] = frame.data['close'].transform(lambda x: x.rolling(window=period).mean()
         )
 
-    def cma(self, period: int = 10):
-        my_locals = locals()
-        del my_locals['self']
-        col = 'cma'
-        self._current_indicators[col] = {}
-        self._current_indicators[col]['args'] = my_locals
-        self._current_indicators[col]['func'] = self.cma
-        self._stock_prices[col] = self._stock_prices['close'].transform(
-            lambda x: x.rolling(window=period).mean()
-        )
-
-    def refresh(self):
-        for indicator in self._current_indicators:
-            indicator_args = self._current_indicators[indicator]['args']
-            indicator_func = self._current_indicators[indicator]['func']
-        # update the columns
-            indicator_func(**indicator_args) # unpack dictionaries
 
 
 

@@ -1,39 +1,57 @@
 import pandas as pd
 from typing import List, Dict
 from pandas.core.groupby import DataFrameGroupBy
+from dataclasses import dataclass
+
+
+@dataclass
+class Stock:
+    symbol: str
+    data: pd.DataFrame
+
+    def __getitem__(self, symbol):
+        return self.symbol
 
 
 class StockFrame:
-
     def __init__(self, data: List[Dict] = None):
+        """
+        :param data: It's a list of dictionaries that comes from alpaca_trade_api.get_barset()
+        sample data:
+            [{ "FB" : Bar({ 'c': 3024.155, 'h': 3027.255, 'l': 3017.67, 'o': 3018.93, 't': 1596121200, 'v': 3171})}]
+        """
         self._data = data
-        self._frame = self.create_stock_frame()
-        self._symbols_groups = None
-        self._symbol_rolling_groups = None
+        self._stock_frames = self.create_stock_frames()
 
     def __getitem__(self, key):
-        return getattr(self._frame, key)
+        return getattr(self._stock_frames, key)
 
     def __setitem__(self, key, value):
-        self._frame[key] = value
+        self._stock_frames[key] = value
 
-    def create_stock_frame(self):
-        pre_list = []
-        for key, value in self._data.items():
-            frame = value.df
-            frame['symbol'] = key
-            pre_list.append(frame)
-        results = pd.concat(pre_list)
-        return results.reset_index().set_index(keys=['symbol', 'time'])
+    def create_stock_frames(self):
+        return [Stock(symbol, data.df) for symbol, data in self._data.items()]
 
     @property
-    def frame(self):
-        return self._frame
+    def stock_frames(self):
+        return self._stock_frames
 
     @property
-    def symbol_groups(self) -> DataFrameGroupBy:
-        self._symbols_groups = self._frame.groupby(
-            by='symbol', as_index=False, sort=True,
-        )
-        return self._symbols_groups
+    def symbols(self):
+        return [frame.symbol for frame in self._stock_frames]
+
+    @property
+    def data_frames(self):
+        return [frame.data for frame in self._stock_frames]
+
+
+
+
+
+
+
+
+
+
+
 
