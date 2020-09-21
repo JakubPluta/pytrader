@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import List, Dict
 from pandas.core.groupby import DataFrameGroupBy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -9,8 +9,8 @@ class Stock:
     symbol: str
     data: pd.DataFrame
 
-    def __getitem__(self, symbol):
-        return self.symbol
+    def __getitem__(self, key):
+        return getattr(self, key)
 
 
 class StockFrame:
@@ -43,10 +43,6 @@ class StockFrame:
     @property
     def data_frames(self):
         return [frame.data for frame in self._stock_frames]
-
-
-
-
 
 
 

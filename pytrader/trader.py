@@ -50,10 +50,3 @@ class PyTrader:
         return seconds_till_market_open
 
 
-    def get_data_bars(self, symbols, time_frame='5Min', slow=30, fast=5):
-        data = self.client.get_barset(symbols, time_frame, limit=20).df
-        for symbol in symbols:
-            data.loc[:, (symbol, 'fast_ema')] = data[symbol]['close'].rolling(window=fast).mean()
-            data.loc[:, (symbol, 'slow_ema')] = data[symbol]['close'].rolling(window=slow).mean()
-        return data
-

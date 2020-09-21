@@ -5,6 +5,8 @@ from datetime import datetime, time, timezone
 from typing import List, Dict, Union, Tuple, Any, Optional
 from alpaca_trade_api.entity import BarSet
 from pytrader.stock_frame import StockFrame
+import btalib as bt
+from ta import add_all_ta_features
 
 
 class Indicators:
@@ -21,38 +23,29 @@ class Indicators:
     def stock_prices(self):
         return self._stock_prices.stock_frames
 
-    def rsi(self, period: int = 14):
+    def macd(self):
         for frame in self._stock_prices.stock_frames:
-            if 'changes' not in frame.data:
-                self.calculate_price_changes()
+            macd = bt.macd(frame.data).df
+            frame.data['macd'] = macd
 
-            frame.data['up_day'] = frame.data['changes'].transform(lambda x: np.where(x >= 0, x, 0))
-            frame.data['down_day'] = frame.data['changes'].transform(lambda x: np.where(x < 0, x.abs(), 0))
-            frame.data['ewma_up'] = frame.data['up_day'].transform(lambda x: x.ewm(span=period).mean() )# rolling average)
-            frame.data['ewma_down'] = frame.data['down_day'].transform(lambda x: x.ewm(span=period).mean() )# rolling average)
-
-            rsi = frame.data['ewma_up'] / frame.data['ewma_down']
-            relative_strength_idx = 100.0 - (100.0 / (1.0 + rsi))
-            frame.data['rsi'] = np.where(relative_strength_idx == 0, 100, relative_strength_idx)
-            frame.data.drop(
-                labels=['ewma_up', 'ewma_down', 'down_day', 'up_day', 'changes'], axis=1, inplace=True
-            )
-
-    def ema(self, period: int = 10):
+    def rsi(self):
         for frame in self._stock_prices.stock_frames:
-            frame.data[f'ema_{str(period)}'] = frame.data['close'].transform(lambda x: x.ewm(span=period).mean())
+            rsi = bt.rsi(frame.data).df
+            frame.data['rsi'] = rsi
 
-    def sma(self, period: int = 10):
-        """
-            Simple Moving Average
-
-            Simple Moving Average (SMA) uses a sliding window
-            to take the average over a set number of time periods.
-            It is an equally weighted mean of the previous n data
-        """
+    def ema(self):
         for frame in self._stock_prices.stock_frames:
-            frame.data[f'sma_{str(period)}'] = frame.data['close'].transform(lambda x: x.rolling(window=period).mean()
-        )
+            ema = bt.rsi(frame.data).df
+            frame.data['ema'] = ema
+
+    def add_all_indicators(self):
+        for frame in self._stock_prices:
+            frame.data = add_all_ta_features(frame.data, 'open', 'high', 'low', 'close', 'volume')
+            self._current_indicators[frame.symbol] = {}
+            self._current_indicators[frame.symbol]['indicators'] = frame.data.iloc[:,6:]
+
+
+
 
 
 
